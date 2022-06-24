@@ -226,7 +226,7 @@ if not args.save_path.endswith('.pth'):
 
 set_seed(args.seed)
 
-device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 transform = T.Compose([
     T.ToUndirected(),

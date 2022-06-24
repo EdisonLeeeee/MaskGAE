@@ -15,7 +15,7 @@ from torch_sparse import SparseTensor
 from torch.utils.data import DataLoader
 from sklearn.metrics import roc_auc_score, average_precision_score
 
-# custom module
+# custom modules
 from loss import info_nce_loss, ce_loss, log_rank_loss, hinge_auc_loss, auc_loss
 
 

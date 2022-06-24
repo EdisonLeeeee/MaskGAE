@@ -10,6 +10,8 @@ PyTorch implementation of the paper [MaskGAE: Masked Graph Modeling Meets Graph 
 - torch_cluster == 1.5.9
 - torch_geometric == 2.0.4
 - torch == 1.9.0
+- scipy == 1.7.3
+- numpy == 1.18.5
 
 # Installation
 

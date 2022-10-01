@@ -4,13 +4,12 @@ import argparse
 
 import torch
 import torch_geometric.transforms as T
-from ogb.nodeproppred import PygNodePropPredDataset
 from torch_geometric.datasets import Amazon, Coauthor, Planetoid, Reddit
 
 # custom modules
 from utils import Logger, set_seed, tab_printer
-from model import MaskGAE, DegreeDecoder, EdgeDecoder, GNNEncoder
-from edge_masking import MaskEdge, MaskPath
+from model import MaskGAE, DegreeDecoder, EdgeDecoder, GNNEncoder, DotEdgeDecoder
+from mask import MaskEdge, MaskPath
 
 
 def train_linkpred(model, splits, args, device="cpu"):
@@ -119,8 +118,9 @@ parser.add_argument("--encoder_activation", nargs="?", default="elu", help="Acti
 parser.add_argument('--encoder_channels', type=int, default=128, help='Channels of GNN encoder. (default: 128)')
 parser.add_argument('--hidden_channels', type=int, default=128, help='Channels of hidden representation. (default: 128)')
 parser.add_argument('--decoder_channels', type=int, default=32, help='Channels of decoder. (default: 128)')
-parser.add_argument('--encoder_layers', type=int, default=2, help='Number of layers of encoder. (default: 2)')
-parser.add_argument('--decoder_layers', type=int, default=2, help='Number of layers of decoder. (default: 2)')
+parser.add_argument('--encoder_layers', type=int, default=1, help='Number of layers of encoder. (default: 1)')
+parser.add_argument('--edge_decoder_layers', type=int, default=2, help='Number of layers for edge decoder. (default: 2)')
+parser.add_argument('--degree_decoder_layers', type=int, default=2, help='Number of layers for degree decoder. (default: 2)')
 parser.add_argument('--encoder_dropout', type=float, default=0.7, help='Dropout probability of encoder. (default: 0.7)')
 parser.add_argument('--decoder_dropout', type=float, default=0.3, help='Dropout probability of decoder. (default: 0.3)')
 parser.add_argument('--alpha', type=float, default=2e-3, help='loss weight for degree prediction. (default: 2e-3)')
@@ -130,13 +130,15 @@ parser.add_argument('--weight_decay', type=float, default=5e-5, help='weight_dec
 parser.add_argument('--grad_norm', type=float, default=1.0, help='grad_norm for training. (default: 1.0.)')
 parser.add_argument('--batch_size', type=int, default=2**16, help='Number of batch size. (default: 2**16)')
 
-
+parser.add_argument('--walks_per_node', type=int, default=1, help='Number of walk times of each node for MaskPath.')
+parser.add_argument('--walk_length', type=int, default=3, help='Number of path length of each walk for MaskPath.')
+parser.add_argument('--p', type=float, default=0.7, help='Mask ratio or sample ratio for MaskEdge/MaskPath')
 parser.add_argument('--bn', action='store_true', help='Whether to use batch normalization for GNN encoder. (default: False)')
 
 parser.add_argument('--epochs', type=int, default=300, help='Number of training epochs. (default: 300)')
 parser.add_argument('--runs', type=int, default=10, help='Number of runs. (default: 10)')
 parser.add_argument('--eval_period', type=int, default=10, help='(default: 10)')
-parser.add_argument('--patience', type=int, default=10, help='(default: 10)')
+parser.add_argument('--patience', type=int, default=20, help='(default: 20)')
 parser.add_argument("--save_path", nargs="?", default="model_linkpred", help="save path for model. (default: model_linkpred)")
 parser.add_argument('--debug', action='store_true', help='Whether to log information in each epoch. (default: False)')
 
@@ -161,9 +163,10 @@ transform = T.Compose([
 ])
 
 
-root = osp.join('~/data/pygdata')
+root = osp.join('~/public_data/pyg_data')
 
 if args.dataset in {'arxiv', 'products'}:
+    from ogb.nodeproppred import PygNodePropPredDataset
     dataset = PygNodePropPredDataset(root=root, name=f'ogbn-{args.dataset}')
     data = transform(dataset[0])
     split_idx = dataset.get_idx_split()
@@ -198,9 +201,9 @@ splits = dict(train=train_data, valid=val_data, test=test_data)
 
 
 if args.mask == 'Path':
-    mask = MaskPath(num_nodes=data.num_nodes)
+    mask = MaskPath(p=args.p, num_nodes=data.num_nodes, walks_per_node=args.walks_per_node, walk_length=args.walk_length)
 elif args.mask == 'Edge':
-    mask = MaskEdge()
+    mask = MaskEdge(p=args.p)
 else:
     mask = None
 
@@ -208,11 +211,14 @@ encoder = GNNEncoder(data.num_features, args.encoder_channels, args.hidden_chann
                      num_layers=args.encoder_layers, dropout=args.encoder_dropout,
                      bn=args.bn, layer=args.layer, activation=args.encoder_activation)
 
-edge_decoder = EdgeDecoder(args.hidden_channels, args.decoder_channels,
-                           num_layers=args.decoder_layers, dropout=args.decoder_dropout)
+if args.edge_decoder_layers == 0:
+    edge_decoder = DotEdgeDecoder()
+else:
+    edge_decoder = EdgeDecoder(args.hidden_channels, args.decoder_channels,
+                               num_layers=args.edge_decoder_layers, dropout=args.decoder_dropout)
 
 degree_decoder = DegreeDecoder(args.hidden_channels, args.decoder_channels,
-                               num_layers=args.decoder_layers, dropout=args.decoder_dropout)
+                               num_layers=args.degree_decoder_layers, dropout=args.decoder_dropout)
 
 
 model = MaskGAE(encoder, edge_decoder, degree_decoder, mask).to(device)

@@ -4,14 +4,16 @@ PyTorch implementation of the paper [MaskGAE: Masked Graph Modeling Meets Graph 
 <p align="center"> <img src="framework.png" /> <p align="center"><em>Fig. 1. Masked Graph Autoencoders.</em></p>
 
 # Requirements
+Higher versions should be also available.
 
-- ogb == 1.3.3
-- torch_sparse == 0.6.10
-- torch_cluster == 1.5.9
-- torch_geometric == 2.0.4
-- torch == 1.9.0
-- scipy == 1.7.3
-- numpy == 1.18.5
++ numpy==1.18.1
++ torch==1.12.1+cu102
++ torch-cluster==1.6.0
++ torch_geometric>=2.1.0
++ torch-scatter==2.0.9
++ torch-sparse==0.6.14
++ CUDA 10.2
++ CUDNN 7.6.0
 
 # Installation
 
@@ -19,11 +21,93 @@ PyTorch implementation of the paper [MaskGAE: Masked Graph Modeling Meets Graph 
 pip install -r requirements.txt
 ```
 
-# Reproduce
+# Reproduction
 
-For link prediction tasks, see `linkpred.ipynb` .
+## Link prediction
++ Cora
+```bash
+# 96.40 ± 0.25
+# 95.94 ± 0.28
+python train_linkpred.py --dataset Cora --bn --decoder_dropout 0.1 --p 0.3
 
-For node classification tasks, see `nodeclas.ipynb`.
+# 96.39 ± 0.14
+# 95.93 ± 0.18
+python train_linkpred.py --dataset Cora --bn --decoder_dropout 0.1 --mask Edge --p 0.7
+```
+
++ Citeseer
+```bash
+# 97.78 ± 0.15
+# 98.01 ± 0.13
+python train_linkpred.py --dataset Citeseer --bn --p 0.3
+
+# 97.73 ± 0.24
+# 97.98 ± 0.20
+python train_linkpred.py --dataset Citeseer --bn --mask Edge --p 0.7
+```
+
++ Pubmed
+```bash
+# 98.80 ± 0.04
+# 98.71 ± 0.04
+python train_linkpred.py --dataset Pubmed --bn --encoder_dropout 0.2 --p 0.3
+
+# 98.83 ± 0.04
+# 98.72 ± 0.06
+python train_linkpred.py --dataset Pubmed --bn --encoder_dropout 0.2 --mask Edge --p 0.7
+```
+
+## Node classification
+
++ Cora
+```bash
+# 84.30 ± 0.39
+python train_nodeclas.py --dataset Cora --bn --l2_normalize --nodeclas_weight_decay 1e-4 --alpha 0.002 --p 0.3
+
+# 84.22 ± 0.22
+python train_nodeclas.py --dataset Cora --bn --l2_normalize --nodeclas_weight_decay 1e-4 --alpha 0.002 --mask Edge --p 0.7
+```
+
++ Citeseer
+```bash
+# 73.55 ± 0.53
+python train_nodeclas.py --dataset Citeseer --bn --l2_normalize --nodeclas_weight_decay 0.1 --alpha 0.001 --decoder_dropout 0. --lr 0.02 --p 0.3 --walk_length 4
+
+# 72.72 ± 0.92
+python train_nodeclas.py --dataset Citeseer --bn --l2_normalize --nodeclas_weight_decay 0.1 --alpha 0.001 --decoder_dropout 0. --lr 0.02 --mask Edge --p 0.7
+```
+
++ Pubmed
+```bash
+# 83.13 ± 0.47
+python train_nodeclas.py --dataset Pubmed --bn --l2_normalize --nodeclas_weight_decay 1e-4 --alpha 0.001 --decoder_dropout 0.5 --p 0.3
+
+# 82.36 ± 0.47
+python train_nodeclas.py --dataset Pubmed --bn --l2_normalize --nodeclas_weight_decay 1e-4 --alpha 0.001 --decoder_dropout 0.5 --mask Edge --p 0.5
+```
+
++ Photo
+```bash
+# 93.33 ± 0.12
+python train_nodeclas.py --dataset Photo --bn --nodeclas_weight_decay 5e-3 --alpha 0.0 --decoder_channels 64 --p 0.3
+
+# 93.24 ± 0.07
+python train_nodeclas.py --dataset Photo --bn --nodeclas_weight_decay 5e-3 --alpha 0.0 --decoder_channels 64 --mask Edge --p 0.7
+
+```
+
++ Computers
+```bash
+# 89.79 ± 0.07
+python train_nodeclas.py --dataset Computers --alpha 0. --bn --encoder_activation relu --encoder_dropout 0.5 --encoder_channels 128 --hidden_channels 256 \
+                          --nodeclas_weight_decay 5e-4 --p 0.6
+# 89.78 ± 0.14
+python train_nodeclas.py --dataset Computers --alpha 0. --bn --encoder_dropout 0.5 --encoder_channels 128 --hidden_channels 256 \
+                          --nodeclas_weight_decay 5e-4 --mask Edge --p 0.7
+```
+
+
+
 
 # Cite
 

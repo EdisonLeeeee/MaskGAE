@@ -106,8 +106,40 @@ python train_nodeclas.py --dataset Computers --alpha 0. --bn --encoder_dropout 0
                           --nodeclas_weight_decay 5e-4 --mask Edge --p 0.7
 ```
 
++ arxiv
+```bash
+# 70.58 ± 0.23
+python train_nodeclas.py --dataset arxiv --alpha 0.001 --bn --decoder_channels 128 --decoder_dropout 0.1 --decoder_layers 4 \
+                          --encoder_channels 512 --encoder_dropout 0.6 --encoder_layers 4 \
+                          --hidden_channels 256 --lr 0.001 --nodeclas_weight_decay 5e-6 --weight_decay 0.0001 --p 0.3 --debug                          
+                 
+# 70.28 ± 0.26
+python train_nodeclas.py --dataset arxiv --alpha 0.001 --bn --decoder_channels 128 --decoder_dropout 0.1 --decoder_layers 4 \
+                          --encoder_channels 512 --encoder_dropout 0.6 --encoder_layers 4 \
+                          --hidden_channels 256 --lr 0.001 --nodeclas_weight_decay 5e-6 --weight_decay 0.0001 --mask Edge --p 0.7 --debug
 
+```
 
+# Graph Classification
+
++ MUTAG
+```bash
+# 89.47 ± 0.11
+python train_graphclas.py --dataset MUTAG --alpha 0.001 --bn --pooling sum --hidden_channels 128 --p 0.3
+
+# 89.45 ± 0.08
+python train_graphclas.py --dataset MUTAG --alpha 0.001 --bn --pooling sum --hidden_channels 128 --mask Edge --p 0.7
+```
+
++ MUTAG
+```bash
+# 74.63 ± 0.05
+python train_graphclas.py --dataset IMDB-BINARY --alpha 0.001 --bn --pooling mean --hidden_channels 512 --decoder_layers 2 --p 0.5
+
+# 75.23 ± 0.04
+python train_graphclas.py --dataset IMDB-BINARY --alpha 0.001 --bn --pooling mean --encoder_activation relu --hidden_channels 256 --decoder_layers 4 --mask Edge --p 0.7
+
+```
 
 # Cite
 

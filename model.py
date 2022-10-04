@@ -2,12 +2,15 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 from torch_geometric.nn import (
+    Linear,
     GCNConv,
     SAGEConv,
     GATConv,
     GINConv,
     GATv2Conv,
     global_add_pool,
+    global_mean_pool,
+    global_max_pool
 )
 
 from torch_geometric.utils import to_undirected, add_self_loops, negative_sampling, degree
@@ -31,9 +34,7 @@ def creat_gnn_layer(name, first_channels, second_channels):
     elif name == "gcn":
         layer = GCNConv(first_channels, second_channels)
     elif name == "gin":
-        layer = GINConv(
-            nn.Sequential(nn.Linear(first_channels, second_channels)), train_eps=True
-        )
+        layer = GINConv(Linear(first_channels, second_channels), train_eps=True)
     elif name == "gat":
         layer = GATConv(first_channels, second_channels, heads=1)
     elif name == "gat2":
@@ -145,8 +146,7 @@ class GNNEncoder(nn.Module):
         return x
 
     @torch.no_grad()
-    def get_embedding(self, x, edge_index,
-                      mode="cat", l2_normalize=False):
+    def get_embedding(self, x, edge_index, mode="cat", l2_normalize=False):
 
         self.eval()
         assert mode in {"cat", "last"}, mode
@@ -177,13 +177,11 @@ class GNNEncoder(nn.Module):
         return embedding
 
     @torch.no_grad()
-    def get_graph_embedding(self, x, edge_index, batch):
+    def get_graph_embedding(self, x, edge_index, batch, l2_normalize=False, pooling='sum'):
         """https://github.com/fanyun-sun/InfoGraph/blob/master/unsupervised/gin.py"""
 
         self.eval()
         assert batch is not None
-        if x is None:
-            x = torch.zeros(batch.size(0), 1, device=edge_index.device)
 
         edge_index = edgeidx2sparse(edge_index, x.shape[0])
         xs = []  # node emb, expected to be (layers_num, batch_node_num, dim)
@@ -199,11 +197,15 @@ class GNNEncoder(nn.Module):
         x = self.activation(x)
         xs.append(x)
 
+        pooling = {'sum': global_add_pool, 'mean': global_mean_pool, 'max': global_max_pool}[pooling]
         # (layers_num, batch_graph_num, dim)
-        x_pool = [global_add_pool(x, batch) for x in xs]
+        x_pool = [pooling(x, batch) for x in xs]
 
         # (batch_graph_num, layers_num × dim)
         embedding = torch.cat(x_pool, dim=1)
+        
+        if l2_normalize:
+            embedding = F.normalize(embedding, p=2, dim=1)  
 
         return embedding  # graph embeddings for current batch
 

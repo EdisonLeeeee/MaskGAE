@@ -119,8 +119,7 @@ parser.add_argument('--encoder_channels', type=int, default=128, help='Channels 
 parser.add_argument('--hidden_channels', type=int, default=128, help='Channels of hidden representation. (default: 128)')
 parser.add_argument('--decoder_channels', type=int, default=32, help='Channels of decoder. (default: 128)')
 parser.add_argument('--encoder_layers', type=int, default=1, help='Number of layers of encoder. (default: 1)')
-parser.add_argument('--edge_decoder_layers', type=int, default=2, help='Number of layers for edge decoder. (default: 2)')
-parser.add_argument('--degree_decoder_layers', type=int, default=2, help='Number of layers for degree decoder. (default: 2)')
+parser.add_argument('--decoder_layers', type=int, default=2, help='Number of layers for decoders. (default: 2)')
 parser.add_argument('--encoder_dropout', type=float, default=0.7, help='Dropout probability of encoder. (default: 0.7)')
 parser.add_argument('--decoder_dropout', type=float, default=0.3, help='Dropout probability of decoder. (default: 0.3)')
 parser.add_argument('--alpha', type=float, default=2e-3, help='loss weight for degree prediction. (default: 2e-3)')
@@ -211,14 +210,14 @@ encoder = GNNEncoder(data.num_features, args.encoder_channels, args.hidden_chann
                      num_layers=args.encoder_layers, dropout=args.encoder_dropout,
                      bn=args.bn, layer=args.layer, activation=args.encoder_activation)
 
-if args.edge_decoder_layers == 0:
+if args.decoder_layers == 0:
     edge_decoder = DotEdgeDecoder()
 else:
     edge_decoder = EdgeDecoder(args.hidden_channels, args.decoder_channels,
-                               num_layers=args.edge_decoder_layers, dropout=args.decoder_dropout)
+                               num_layers=args.decoder_layers, dropout=args.decoder_dropout)
 
 degree_decoder = DegreeDecoder(args.hidden_channels, args.decoder_channels,
-                               num_layers=args.degree_decoder_layers, dropout=args.decoder_dropout)
+                               num_layers=args.decoder_layers, dropout=args.decoder_dropout)
 
 
 model = MaskGAE(encoder, edge_decoder, degree_decoder, mask).to(device)

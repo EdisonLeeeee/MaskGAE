@@ -15,12 +15,14 @@ from torch_geometric.utils.num_nodes import maybe_num_nodes
 
 def mask_path(edge_index: Tensor, p: float = 0.3, walks_per_node: int = 1,
               walk_length: int = 3, num_nodes: Optional[int] = None,
+              start: str = 'node',
               is_sorted: bool = False,
               training: bool = True) -> Tuple[Tensor, Tensor]:
     if p < 0. or p > 1.:
         raise ValueError(f'Sample probability has to be between 0 and 1 '
                          f'(got {p}')
 
+    assert start in ['node', 'edge']
     num_edges = edge_index.size(1)
     edge_mask = edge_index.new_ones(num_edges, dtype=torch.bool)
     
@@ -36,12 +38,12 @@ def mask_path(edge_index: Tensor, p: float = 0.3, walks_per_node: int = 1,
         edge_index = sort_edge_index(edge_index, num_nodes=num_nodes)
 
     row, col = edge_index
-    sample_mask = torch.rand(row.size(0), device=edge_index.device) <= p
-    start = row[sample_mask].repeat(walks_per_node)
+    if start == 'edge':
+        sample_mask = torch.rand(row.size(0), device=edge_index.device) <= p
+        start = row[sample_mask].repeat(walks_per_node)
+    else:
+        start = torch.randperm(num_nodes, device=edge_index.device)[:round(num_nodes*p)]
     
-    # sample_mask = torch.rand(num_nodes, device=edge_index.device) <= p
-    # start = sample_mask.nonzero().view(-1).repeat(walks_per_node)
-
     deg = degree(row, num_nodes=num_nodes)
     rowptr = row.new_zeros(num_nodes + 1)
     torch.cumsum(deg, 0, out=rowptr[1:])
@@ -63,15 +65,17 @@ def mask_edge(edge_index: Tensor, p: float=0.7):
 
 
 class MaskPath(nn.Module):
-    def __init__(self, p: float = 0.3, 
-                 walks_per_node: int = 2,
-                 walk_length: int = 4, 
+    def __init__(self, p: float = 0.7, 
+                 walks_per_node: int = 1,
+                 walk_length: int = 3, 
+                 start: str = 'node',
                  num_nodes: Optional[int]=None,
                  undirected: bool=True):
         super().__init__()
         self.p = p
         self.walks_per_node = walks_per_node
         self.walk_length = walk_length
+        self.start = start
         self.num_nodes = num_nodes
         self.undirected = undirected
 
@@ -79,6 +83,7 @@ class MaskPath(nn.Module):
         remaining_edges, masked_edges = mask_path(edge_index, self.p,
                                                   walks_per_node=self.walks_per_node,
                                                   walk_length=self.walk_length,
+                                                  start=self.start,
                                                   num_nodes=self.num_nodes)
         if self.undirected:
             remaining_edges = to_undirected(remaining_edges)
@@ -86,7 +91,7 @@ class MaskPath(nn.Module):
 
     def extra_repr(self):
         return f"p={self.p}, walks_per_node={self.walks_per_node}, walk_length={self.walk_length}, \n"\
-            f"undirected={self.undirected}"
+            f"start={self.start}, undirected={self.undirected}"
 
 
 class MaskEdge(nn.Module):

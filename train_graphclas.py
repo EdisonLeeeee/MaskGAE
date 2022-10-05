@@ -204,7 +204,7 @@ def train_graphclas(model, splits_all, args, device='cpu'):
         print(f"Run {run+1}: Best test accuray {test_acc_mean:.2%}.")
         logger.add_result(run, (test_acc_mean, test_acc_mean))
 
-    print('##### Final Testing result (Node Classification)')
+    print('##### Final Testing result (Graph Classification)')
     logger.print_statistics()
 
 
@@ -231,8 +231,7 @@ parser.add_argument('--weight_decay', type=float, default=5e-5, help='weight_dec
 parser.add_argument('--grad_norm', type=float, default=1.0, help='grad_norm for training. (default: 1.0.)')
 parser.add_argument('--batch_size', type=int, default=2**16, help='Number of batch size for link prediction training. (default: 2**16)')
 
-parser.add_argument('--walks_per_node', type=int, default=1, help='Number of walk times of each node for MaskPath.')
-parser.add_argument('--walk_length', type=int, default=3, help='Number of path length of each walk for MaskPath.')
+parser.add_argument("--start", nargs="?", default="node", help="Which Type to sample starting nodes for random walks, (default: node)")
 parser.add_argument('--p', type=float, default=0.7, help='Mask ratio or sample ratio for MaskEdge/MaskPath')
 
 parser.add_argument('--l2_normalize', action='store_true', help='Whether to use l2 normalize output embedding. (default: False)')
@@ -244,8 +243,9 @@ parser.add_argument('--epochs', type=int, default=300, help='Number of training 
 parser.add_argument('--runs', type=int, default=10, help='Number of runs. (default: 10)')
 parser.add_argument('--eval_period', type=int, default=10, help='(default: 10)')
 parser.add_argument('--patience', type=int, default=10, help='(default: 10)')
-parser.add_argument("--save_path", nargs="?", default="model_nodeclas", help="save path for model. (default: model_nodeclas)")
+parser.add_argument("--save_path", nargs="?", default="model_graphclas", help="save path for model. (default: model_graphclas)")
 parser.add_argument('--debug', action='store_true', help='Whether to log information in each epoch. (default: False)')
+parser.add_argument("--device", type=int, default=0)
 
 
 try:
@@ -259,7 +259,10 @@ if not args.save_path.endswith('.pth'):
     args.save_path += '.pth'
 
 set_seed(args.seed)
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+if args.device < 0:
+    device = "cpu"
+else:
+    device = f"cuda:{args.device}" if torch.cuda.is_available() else "cpu"
 
 from torch_geometric.datasets import TUDataset
 from torch_geometric.loader import DataLoader
@@ -309,12 +312,14 @@ for data in loader:
     splits_all.append(splits)
 
 if args.mask == 'Path':
-    mask = MaskPath(p=args.p, num_nodes=None, walks_per_node=args.walks_per_node, walk_length=args.walk_length)
+    mask = MaskPath(p=args.p, num_nodes=data.num_nodes, 
+                    start=args.start,
+                    walk_length=args.encoder_layers+1)
 elif args.mask == 'Edge':
     mask = MaskEdge(p=args.p)
 else:
     mask = None
-
+    
 encoder = GNNEncoder(data.num_features, args.encoder_channels, args.hidden_channels,
                      num_layers=args.encoder_layers, dropout=args.encoder_dropout,
                      bn=args.bn, layer=args.layer, activation=args.encoder_activation)

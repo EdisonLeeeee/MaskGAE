@@ -113,6 +113,7 @@ parser.add_argument("--dataset", nargs="?", default="Cora", help="Datasets. (def
 parser.add_argument("--mask", nargs="?", default="Path", help="Masking stractegy, `Path`, `Edge` or `None` (default: Path)")
 parser.add_argument('--seed', type=int, default=2022, help='Random seed for model and dataset. (default: 2022)')
 
+parser.add_argument('--bn', action='store_true', help='Whether to use batch normalization for GNN encoder. (default: False)')
 parser.add_argument("--layer", nargs="?", default="gcn", help="GNN layer, (default: gcn)")
 parser.add_argument("--encoder_activation", nargs="?", default="elu", help="Activation function for GNN encoder, (default: elu)")
 parser.add_argument('--encoder_channels', type=int, default=128, help='Channels of GNN encoder. (default: 128)')
@@ -129,10 +130,8 @@ parser.add_argument('--weight_decay', type=float, default=5e-5, help='weight_dec
 parser.add_argument('--grad_norm', type=float, default=1.0, help='grad_norm for training. (default: 1.0.)')
 parser.add_argument('--batch_size', type=int, default=2**16, help='Number of batch size. (default: 2**16)')
 
-parser.add_argument('--walks_per_node', type=int, default=1, help='Number of walk times of each node for MaskPath.')
-parser.add_argument('--walk_length', type=int, default=3, help='Number of path length of each walk for MaskPath.')
+parser.add_argument("--start", nargs="?", default="node", help="Which Type to sample starting nodes for random walks, (default: node)")
 parser.add_argument('--p', type=float, default=0.7, help='Mask ratio or sample ratio for MaskEdge/MaskPath')
-parser.add_argument('--bn', action='store_true', help='Whether to use batch normalization for GNN encoder. (default: False)')
 
 parser.add_argument('--epochs', type=int, default=300, help='Number of training epochs. (default: 300)')
 parser.add_argument('--runs', type=int, default=10, help='Number of runs. (default: 10)')
@@ -140,6 +139,7 @@ parser.add_argument('--eval_period', type=int, default=10, help='(default: 10)')
 parser.add_argument('--patience', type=int, default=20, help='(default: 20)')
 parser.add_argument("--save_path", nargs="?", default="model_linkpred", help="save path for model. (default: model_linkpred)")
 parser.add_argument('--debug', action='store_true', help='Whether to log information in each epoch. (default: False)')
+parser.add_argument("--device", type=int, default=0)
 
 
 try:
@@ -153,8 +153,10 @@ if not args.save_path.endswith('.pth'):
     args.save_path += '.pth'
     
 set_seed(args.seed)
-
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+if args.device < 0:
+    device = "cpu"
+else:
+    device = f"cuda:{args.device}" if torch.cuda.is_available() else "cpu"
 
 transform = T.Compose([
     T.ToUndirected(),
@@ -198,9 +200,10 @@ train_data, val_data, test_data = T.RandomLinkSplit(num_val=0.05, num_test=0.1,
 
 splits = dict(train=train_data, valid=val_data, test=test_data)
 
-
 if args.mask == 'Path':
-    mask = MaskPath(p=args.p, num_nodes=data.num_nodes, walks_per_node=args.walks_per_node, walk_length=args.walk_length)
+    mask = MaskPath(p=args.p, num_nodes=data.num_nodes, 
+                    start=args.start,
+                    walk_length=args.encoder_layers+1)
 elif args.mask == 'Edge':
     mask = MaskEdge(p=args.p)
 else:

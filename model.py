@@ -28,7 +28,7 @@ def edgeidx2sparse(edge_index, num_nodes):
     ).to(edge_index.device)
 
 
-def creat_gnn_layer(name, first_channels, second_channels):
+def creat_gnn_layer(name, first_channels, second_channels, heads):
     if name == "sage":
         layer = SAGEConv(first_channels, second_channels)
     elif name == "gcn":
@@ -36,9 +36,9 @@ def creat_gnn_layer(name, first_channels, second_channels):
     elif name == "gin":
         layer = GINConv(Linear(first_channels, second_channels), train_eps=True)
     elif name == "gat":
-        layer = GATConv(first_channels, second_channels, heads=1)
+        layer = GATConv(-1, second_channels, heads=heads)
     elif name == "gat2":
-        layer = GATv2Conv(first_channels, second_channels, heads=1)
+        layer = GATv2Conv(-1, second_channels, heads=heads)
     else:
         raise ValueError(name)
     return layer
@@ -98,14 +98,13 @@ class GNNEncoder(nn.Module):
         in_channels, self.emb = create_input_layer(
             num_nodes, in_channels, use_node_feats=use_node_feats, node_emb=node_emb
         )
-
         for i in range(num_layers):
             first_channels = in_channels if i == 0 else hidden_channels
             second_channels = out_channels if i == num_layers - 1 else hidden_channels
+            heads = 1 if i == num_layers - 1 or 'gat' not in layer else 4
 
-            self.convs.append(creat_gnn_layer(layer, first_channels, second_channels))
-
-            self.bns.append(bn(second_channels))
+            self.convs.append(creat_gnn_layer(layer, first_channels, second_channels, heads))
+            self.bns.append(bn(second_channels*heads))
 
         self.dropout = nn.Dropout(dropout)
         self.activation = creat_activation_layer(activation)
@@ -426,7 +425,7 @@ class MaskGAE(nn.Module):
         return pred
 
     @torch.no_grad()
-    def test(self, z, pos_edge_index, neg_edge_index, batch_size=2 ** 16):
+    def test(self, z, pos_edge_index, neg_edge_index, batch_size=2**16):
 
         pos_pred = self.batch_predict(z, pos_edge_index)
         neg_pred = self.batch_predict(z, neg_edge_index)
@@ -441,7 +440,7 @@ class MaskGAE(nn.Module):
         return roc_auc_score(y, pred), average_precision_score(y, pred)
 
     @torch.no_grad()
-    def test_ogb(self, z_train, z_full, splits, evaluator, batch_size=2 ** 16):
+    def test_ogb(self, z_train, z_full, splits, evaluator, batch_size=2**16):
 
         pos_valid_edge = splits["valid"].pos_edge_label_index
         neg_valid_edge = splits["valid"].neg_edge_label_index

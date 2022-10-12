@@ -74,19 +74,18 @@ def train_linkpred(model, splits, args, device="cpu"):
                 else:
                     cnt_wait += 1
 
-                if args.debug:
-                    for key, result in results.items():
-                        valid_result, test_result = result
-                        print(key)
-                        print(f'Run: {run + 1:02d} / {args.runs:02d}, '
-                              f'Epoch: {epoch:02d} / {args.epochs:02d}, '
-                              f'Best_epoch: {best_epoch:02d}, '
-                              f'Best_valid: {best_valid:.2%}%, '
-                              f'Loss: {loss:.4f}, '
-                              f'Valid: {valid_result:.2%}, '
-                              f'Test: {test_result:.2%}',
-                              f'Training Time/epoch: {t2-t1:.3f}')
-                    print('#' * 10)
+                for key, result in results.items():
+                    valid_result, test_result = result
+                    print(key)
+                    print(f'Run: {run + 1:02d} / {args.runs:02d}, '
+                          f'Epoch: {epoch:02d} / {args.epochs:02d}, '
+                          f'Best_epoch: {best_epoch:02d}, '
+                          f'Best_valid: {best_valid:.2%}%, '
+                          f'Loss: {loss:.4f}, '
+                          f'Valid: {valid_result:.2%}, '
+                          f'Test: {test_result:.2%}',
+                          f'Training Time/epoch: {t2-t1:.3f}')
+                print('#' * round(140*epoch/(args.epochs+1)))
                 if cnt_wait == args.patience:
                     print('Early stopping!')
                     break
@@ -192,7 +191,7 @@ parser.add_argument('--encoder_dropout', type=float, default=0.8, help='Dropout 
 parser.add_argument('--decoder_dropout', type=float, default=0.2, help='Dropout probability of decoder. (default: 0.2)')
 parser.add_argument('--alpha', type=float, default=0., help='loss weight for degree prediction. (default: 0.)')
 
-parser.add_argument('--lr', type=float, default=1e-2, help='Learning rate for training. (default: 1e-2)')
+parser.add_argument('--lr', type=float, default=0.01, help='Learning rate for training. (default: 0.01)')
 parser.add_argument('--weight_decay', type=float, default=5e-5, help='weight_decay for link prediction training. (default: 5e-5)')
 parser.add_argument('--grad_norm', type=float, default=1.0, help='grad_norm for training. (default: 1.0.)')
 parser.add_argument('--batch_size', type=int, default=2**16, help='Number of batch size for link prediction training. (default: 2**16)')
@@ -206,8 +205,8 @@ parser.add_argument('--nodeclas_weight_decay', type=float, default=1e-3, help='w
 
 parser.add_argument('--epochs', type=int, default=500, help='Number of training epochs. (default: 500)')
 parser.add_argument('--runs', type=int, default=10, help='Number of runs. (default: 10)')
-parser.add_argument('--eval_period', type=int, default=10, help='(default: 10)')
-parser.add_argument('--patience', type=int, default=10, help='(default: 10)')
+parser.add_argument('--eval_period', type=int, default=30, help='(default: 30)')
+parser.add_argument('--patience', type=int, default=30, help='(default: 30)')
 parser.add_argument("--save_path", nargs="?", default="model_nodeclas", help="save path for model. (default: model_nodeclas)")
 parser.add_argument('--debug', action='store_true', help='Whether to log information in each epoch. (default: False)')
 parser.add_argument("--device", type=int, default=0)
@@ -289,7 +288,7 @@ splits = dict(train=train_data, valid=val_data, test=test_data)
 if args.mask == 'Path':
     mask = MaskPath(p=args.p, num_nodes=data.num_nodes, 
                     start=args.start,
-                    walk_length=args.encoder_layers+1)
+                    walk_length=3)
 elif args.mask == 'Edge':
     mask = MaskEdge(p=args.p)
 else:

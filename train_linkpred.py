@@ -69,7 +69,6 @@ def train_linkpred(model, splits, args, device="cpu"):
                     cnt_wait = 0
                 else:
                     cnt_wait += 1
-
                 if args.debug:
                     for key, result in results.items():
                         valid_result, test_result = result
@@ -82,7 +81,7 @@ def train_linkpred(model, splits, args, device="cpu"):
                               f'Valid: {valid_result:.2%}, '
                               f'Test: {test_result:.2%}',
                               f'Training Time/epoch: {t2-t1:.3f}')
-                    print('#' * 10)
+                    print('#' * round(140*epoch/(args.epochs+1)))
                 if cnt_wait == args.patience:
                     print('Early stopping!')
                     break
@@ -118,25 +117,25 @@ parser.add_argument("--layer", nargs="?", default="gcn", help="GNN layer, (defau
 parser.add_argument("--encoder_activation", nargs="?", default="elu", help="Activation function for GNN encoder, (default: elu)")
 parser.add_argument('--encoder_channels', type=int, default=128, help='Channels of GNN encoder. (default: 128)')
 parser.add_argument('--hidden_channels', type=int, default=128, help='Channels of hidden representation. (default: 128)')
-parser.add_argument('--decoder_channels', type=int, default=32, help='Channels of decoder. (default: 128)')
+parser.add_argument('--decoder_channels', type=int, default=64, help='Channels of decoder. (default: 64)')
 parser.add_argument('--encoder_layers', type=int, default=1, help='Number of layers of encoder. (default: 1)')
 parser.add_argument('--decoder_layers', type=int, default=2, help='Number of layers for decoders. (default: 2)')
-parser.add_argument('--encoder_dropout', type=float, default=0.7, help='Dropout probability of encoder. (default: 0.7)')
-parser.add_argument('--decoder_dropout', type=float, default=0.3, help='Dropout probability of decoder. (default: 0.3)')
-parser.add_argument('--alpha', type=float, default=2e-3, help='loss weight for degree prediction. (default: 2e-3)')
+parser.add_argument('--encoder_dropout', type=float, default=0.8, help='Dropout probability of encoder. (default: 0.7)')
+parser.add_argument('--decoder_dropout', type=float, default=0.2, help='Dropout probability of decoder. (default: 0.3)')
+parser.add_argument('--alpha', type=float, default=0.003, help='loss weight for degree prediction. (default: 2e-3)')
 
 parser.add_argument('--lr', type=float, default=1e-2, help='Learning rate for training. (default: 1e-2)')
 parser.add_argument('--weight_decay', type=float, default=5e-5, help='weight_decay for training. (default: 5e-5)')
 parser.add_argument('--grad_norm', type=float, default=1.0, help='grad_norm for training. (default: 1.0.)')
 parser.add_argument('--batch_size', type=int, default=2**16, help='Number of batch size. (default: 2**16)')
 
-parser.add_argument("--start", nargs="?", default="node", help="Which Type to sample starting nodes for random walks, (default: node)")
+parser.add_argument("--start", nargs="?", default="edge", help="Which Type to sample starting nodes for random walks, (default: edge)")
 parser.add_argument('--p', type=float, default=0.7, help='Mask ratio or sample ratio for MaskEdge/MaskPath')
 
-parser.add_argument('--epochs', type=int, default=300, help='Number of training epochs. (default: 300)')
+parser.add_argument('--epochs', type=int, default=500, help='Number of training epochs. (default: 300)')
 parser.add_argument('--runs', type=int, default=10, help='Number of runs. (default: 10)')
 parser.add_argument('--eval_period', type=int, default=10, help='(default: 10)')
-parser.add_argument('--patience', type=int, default=20, help='(default: 20)')
+parser.add_argument('--patience', type=int, default=30, help='(default: 30)')
 parser.add_argument("--save_path", nargs="?", default="model_linkpred", help="save path for model. (default: model_linkpred)")
 parser.add_argument('--debug', action='store_true', help='Whether to log information in each epoch. (default: False)')
 parser.add_argument("--device", type=int, default=0)
@@ -166,33 +165,21 @@ transform = T.Compose([
 
 root = osp.join('~/public_data/pyg_data')
 
-if args.dataset in {'arxiv', 'products'}:
+if args.dataset in {'arxiv'}:
     from ogb.nodeproppred import PygNodePropPredDataset
     dataset = PygNodePropPredDataset(root=root, name=f'ogbn-{args.dataset}')
-    data = transform(dataset[0])
-    split_idx = dataset.get_idx_split()
-    data.train_nodes = split_idx['train']
-    data.val_nodes = split_idx['valid']
-    data.test_nodes = split_idx['test']
-
 elif args.dataset in {'Cora', 'Citeseer', 'Pubmed'}:
     dataset = Planetoid(root, args.dataset)
-    data = transform(dataset[0])
-
 elif args.dataset == 'Reddit':
     dataset = Reddit(osp.join(root, args.dataset))
-    data = transform(dataset[0])
 elif args.dataset in {'Photo', 'Computers'}:
     dataset = Amazon(root, args.dataset)
-    data = transform(dataset[0])
-    data = T.RandomNodeSplit(num_val=0.1, num_test=0.8)(data)
 elif args.dataset in {'CS', 'Physics'}:
     dataset = Coauthor(root, args.dataset)
-    data = transform(dataset[0])
-    data = T.RandomNodeSplit(num_val=0.1, num_test=0.8)(data)
 else:
     raise ValueError(args.dataset)
-
+    
+data = transform(dataset[0])
 train_data, val_data, test_data = T.RandomLinkSplit(num_val=0.05, num_test=0.1,
                                                     is_undirected=True,
                                                     split_labels=True,

@@ -42,7 +42,7 @@ def mask_path(edge_index: Tensor, p: float = 0.3, walks_per_node: int = 1,
         sample_mask = torch.rand(row.size(0), device=edge_index.device) <= p
         start = row[sample_mask].repeat(walks_per_node)
     else:
-        start = torch.randperm(num_nodes, device=edge_index.device)[:round(num_nodes*p)]
+        start = torch.randperm(num_nodes, device=edge_index.device)[:round(num_nodes*p)].repeat(walks_per_node)
     
     deg = degree(row, num_nodes=num_nodes)
     rowptr = row.new_zeros(num_nodes + 1)

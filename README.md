@@ -37,6 +37,11 @@ python train_linkpred.py --dataset Citeseer --bn --mask Edge
 python train_linkpred.py --dataset Pubmed --bn --encoder_dropout 0.2
 python train_linkpred.py --dataset Pubmed --bn --encoder_dropout 0.2 --mask Edge
 ```
++ Collab
+```bash
+python train_linkpred_ogb.py
+python train_linkpred_ogb.py --mask Edge
+```
 
 ## Node classification
 

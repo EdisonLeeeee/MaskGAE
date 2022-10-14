@@ -1,5 +1,5 @@
 # MaskGAE: Masked Graph Modeling Meets Graph Autoencoders
-PyTorch implementation of the paper [MaskGAE: Masked Graph Modeling Meets Graph Autoencoders](https://arxiv.org/abs/2205.10053).
+PyTorch implementation of MaskGAE: Masked Graph Modeling Meets Graph Autoencoders
 
 <p align="center"> <img src="framework.png" /> <p align="center"><em>Fig. 1. Masked Graph Autoencoders.</em></p>
 
@@ -142,5 +142,3 @@ python train_graphclas.py --dataset IMDB-BINARY --alpha 0.001 --bn --pooling mea
 python train_graphclas.py --dataset IMDB-BINARY --alpha 0.001 --bn --pooling mean --encoder_activation relu --hidden_channels 256 --decoder_layers 4 --mask Edge
 
 ```
-
-+ TODO

@@ -1,5 +1,7 @@
-# MaskGAE: Masked Graph Modeling Meets Graph Autoencoders
-PyTorch implementation of MaskGAE: Masked Graph Modeling Meets Graph Autoencoders
+# What’s Behind the Mask: Understanding Masked Graph Modeling
+for Graph Autoencoders
+PyTorch implementation of What’s Behind the Mask: Understanding Masked Graph Modeling
+for Graph Autoencoders
 
 # Requirements
 Higher versions should be also available.

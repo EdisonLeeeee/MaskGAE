@@ -312,7 +312,7 @@ for data in loader:
     splits_all.append(splits)
 
 if args.mask == 'Path':
-    mask = MaskPath(p=args.p, num_nodes=data.num_nodes, 
+    mask = MaskPath(p=args.p, num_nodes=None, 
                     start=args.start,
                     walk_length=args.encoder_layers+1)
 elif args.mask == 'Edge':

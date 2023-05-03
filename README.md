@@ -1,5 +1,4 @@
-# What’s Behind the Mask: Understanding Masked Graph Modeling
-for Graph Autoencoders
+# What’s Behind the Mask: Understanding Masked Graph Modeling for Graph Autoencoders
 PyTorch implementation of What’s Behind the Mask: Understanding Masked Graph Modeling
 for Graph Autoencoders
 

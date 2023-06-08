@@ -1,5 +1,5 @@
 # MaskGAE
-> [**What’s Behind the Mask: Understanding Masked Graph Modeling for Graph Autoencoders**]https://arxiv.org/abs/2205.10053) (KDD 2023)
+> [**What’s Behind the Mask: Understanding Masked Graph Modeling for Graph Autoencoders**]https://arxiv.org/abs/2205.10053) (KDD 2023)\
 > [**MaskGAE: Masked Graph Modeling Meets Graph Autoencoders**]https://arxiv.org/abs/2205.10053v1) (arXiv 2022)
 >
 > Jintang Li, Ruofan Wu, Wangbin Sun, Liang Chen, Sheng Tian, Liang Zhu, Changhua Meng, Zibin Zheng, Weiqiang Wang    

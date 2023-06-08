@@ -10,9 +10,9 @@ from torch_geometric.utils import to_undirected
 from ogb.linkproppred import Evaluator, PygLinkPropPredDataset
 
 # custom modules
-from utils import Logger, set_seed, tab_printer
-from model import MaskGAE, DegreeDecoder, EdgeDecoder, GNNEncoder, DotEdgeDecoder
-from mask import MaskEdge, MaskPath
+from maskgae.utils import Logger, set_seed, tab_printer
+from maskgae.model import MaskGAE, DegreeDecoder, EdgeDecoder, GNNEncoder, DotEdgeDecoder
+from maskgae.mask import MaskEdge, MaskPath
 
 
 def train_linkpred(model, splits, args, device="cpu"):
@@ -161,7 +161,8 @@ transform = T.Compose([
 ])
 
 
-root = osp.join('~/public_data/pyg_data')
+# root = '~/public_data/pyg_data' # my root directory
+root = 'data/'
 
 print('Loading Data...')
 if args.dataset in {'ogbl-collab'}:
@@ -210,7 +211,7 @@ if args.mask == 'Path':
 elif args.mask == 'Edge':
     mask = MaskEdge(p=args.p)
 else:
-    mask = None
+    mask = None # vanilla GAE
 
 encoder = GNNEncoder(data.num_features, args.encoder_channels, args.hidden_channels,
                      num_layers=args.encoder_layers, dropout=args.encoder_dropout,

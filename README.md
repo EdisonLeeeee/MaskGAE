@@ -1,16 +1,35 @@
-# What’s Behind the Mask: Understanding Masked Graph Modeling for Graph Autoencoders
-PyTorch implementation of What’s Behind the Mask: Understanding Masked Graph Modeling
-for Graph Autoencoders
+# MaskGAE
+> [**What’s Behind the Mask: Understanding Masked Graph Modeling for Graph Autoencoders**]https://arxiv.org/abs/2205.10053) (KDD 2023)
+> [**MaskGAE: Masked Graph Modeling Meets Graph Autoencoders**]https://arxiv.org/abs/2205.10053v1) (arXiv 2022)
+>
+> Jintang Li, Ruofan Wu, Wangbin Sun, Liang Chen, Sheng Tian, Liang Zhu, Changhua Meng, Zibin Zheng, Weiqiang Wang    
+
+**This repository is an official PyTorch implementation of MaskGAE.**
+<p align="center">
+  <img src="figs/maskgae.png"/>
+<p align="center"><em>Fig. 1. MaskGAE framework and masking strategies.</em>
+</p>
+
+# Abstract
+The last years have witnessed the emergence of a promising self-supervised learning strategy, referred to as masked autoencoding. However, there is a lack of theoretical understanding of how masking matters on graph autoencoders (GAEs). In this work, we present masked graph autoencoder (MaskGAE), a self-supervised learning framework for graph-structured data. Different from standard GAEs, MaskGAE adopts masked graph modeling (MGM) as a principled pretext task - masking a portion of edges and attempting to reconstruct the missing part with partially visible, unmasked graph structure. To understand whether MGM can help GAEs learn better representations, we provide both theoretical and empirical evidence to comprehensively justify the benefits of this pretext task. Theoretically, we establish close connections between GAEs and contrastive learning, showing that MGM significantly improves the self-supervised learning scheme of GAEs. Empirically, we conduct extensive experiments on a variety of graph benchmarks, demonstrating the superiority of MaskGAE over several state-of-the-arts on both link prediction and node classification tasks.
+
+<p align="center">
+  <img src="figs/comparison.png"/>
+<p align="center"><em>Fig. 2. Comparison of masked language modeling (MLM), masked image modeling (MIM) and masked graph modeling (MGM).</em>
+</p>
+
 
 # Requirements
 Higher versions should be also available.
 
-+ numpy==1.18.1
++ numpy==1.21.6
 + torch==1.12.1+cu102
 + torch-cluster==1.6.0
-+ torch_geometric>=2.1.0
++ torch_geometric>=2.4.0
 + torch-scatter==2.0.9
 + torch-sparse==0.6.14
++ scipy==1.7.3
++ texttable==1.6.2
 + CUDA 10.2
 + CUDNN 7.6.0
 
@@ -19,6 +38,20 @@ Higher versions should be also available.
 ```bash
 pip install -r requirements.txt
 ```
+
+# Dataset
+| Dataset      | #Nodes     | #Edges     | #Features | #Classes | Density   |
+|--------------|------------|------------|-----------|----------|-----------|
+| Cora         | 2,708      | 10,556     | 1,433     | 7        | 0.144%    |
+| CiteSeer     | 3,327      | 9,104      | 3,703     | 6        | 0.082%    |
+| Pubmed       | 19,717     | 88,648     | 500       | 3        | 0.023%    |
+| Photo        | 7,650      | 238,162    | 745       | 8        | 0.407%    |
+| Computer     | 13,752     | 491,722    | 767       | 10       | 0.260%    |
+| arXiv        | 16,9343    | 2,315,598  | 128       | 40       | 0.008%    |
+| MAG          | 736,389    | 10,792,672 | 128       | 349      | 0.002%    |
+| Collab       | 235,868    | 1,285,465  | 128       | -        | 0.002%    |
+
+All datasets used throughout experiments are publicly available in [PyTorch Geometric library](https://github.com/pyg-team/pytorch_geometric).
 
 # Reproduction
 
@@ -87,7 +120,29 @@ python train_nodeclas.py --dataset arxiv --bn --decoder_channels 128 --decoder_d
 python train_nodeclas.py --dataset mag --alpha 0.003 --bn --decoder_channels 128\
                          --encoder_channels 256 --encoder_dropout 0.7 --epochs 100 \
                          --hidden_channels 128 --nodeclas_weight_decay 1e-5 --weight_decay 5e-5 --eval_period 10                                       
-python train_nodeclas.py --dataset mag --alpha 0.003 --bn --decoder_channels 128\
+python train_nodeclas.py --dataset mag --alpha 0.003 --bn --decoder_channels 128
                          --encoder_channels 256 --encoder_dropout 0.7 --epochs 100 \
                          --hidden_channels 128 --nodeclas_weight_decay 1e-5 --weight_decay 5e-5 --eval_period 10 --mask Edge   
+```
+
+You can also simply run `node_classification.ipynb` to reproduce the results.
+
+# Cite
+
+```bibtex
+@inproceedings{maskgae,
+  author       = {Jintang Li and
+                  Ruofan Wu and
+                  Wangbin Sun and
+                  Liang Chen and
+                  Sheng Tian and
+                  Liang Zhu and
+                  Changhua Meng and
+                  Zibin Zheng and
+                  Weiqiang Wang},
+  title        = {What's Behind the Mask: Understanding Masked Graph Modeling for Graph Autoencoders},
+  booktitle    = {KDD},
+  publisher    = {{ACM}},
+  year         = {2023}
+}
 ```

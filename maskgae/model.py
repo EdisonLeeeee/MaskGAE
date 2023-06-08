@@ -13,16 +13,16 @@ from torch_geometric.nn import (
     global_max_pool
 )
 
-from torch_geometric.utils import to_undirected, add_self_loops, negative_sampling, degree
+from torch_geometric.utils import add_self_loops, negative_sampling, degree
 from torch_sparse import SparseTensor
 from torch.utils.data import DataLoader
 from sklearn.metrics import roc_auc_score, average_precision_score
 
 # custom modules
-from loss import info_nce_loss, ce_loss, log_rank_loss, hinge_auc_loss, auc_loss
+from maskgae.loss import info_nce_loss, ce_loss, log_rank_loss, hinge_auc_loss, auc_loss
 
 
-def edgeidx2sparse(edge_index, num_nodes):
+def to_sparse_tensor(edge_index, num_nodes):
     return SparseTensor.from_edge_index(
         edge_index, sparse_sizes=(num_nodes, num_nodes)
     ).to(edge_index.device)
@@ -131,7 +131,7 @@ class GNNEncoder(nn.Module):
 
     def forward(self, x, edge_index):
         x = self.create_input_feat(x)
-        edge_index = edgeidx2sparse(edge_index, x.size(0))
+        edge_index = to_sparse_tensor(edge_index, x.size(0))
 
         for i, conv in enumerate(self.convs[:-1]):
             x = self.dropout(x)
@@ -151,7 +151,7 @@ class GNNEncoder(nn.Module):
         assert mode in {"cat", "last"}, mode
 
         x = self.create_input_feat(x)
-        edge_index = edgeidx2sparse(edge_index, x.size(0))
+        edge_index = to_sparse_tensor(edge_index, x.size(0))
         out = []
         for i, conv in enumerate(self.convs[:-1]):
             x = self.dropout(x)
@@ -182,7 +182,7 @@ class GNNEncoder(nn.Module):
         self.eval()
         assert batch is not None
 
-        edge_index = edgeidx2sparse(edge_index, x.shape[0])
+        edge_index = to_sparse_tensor(edge_index, x.shape[0])
         xs = []  # node emb, expected to be (layers_num, batch_node_num, dim)
         for i, conv in enumerate(self.convs[:-1]):
             x = self.dropout(x)

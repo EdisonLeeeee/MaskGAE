@@ -10,9 +10,9 @@ from torch_geometric.datasets import Amazon, Coauthor, Planetoid, Reddit
 from torch.utils.data import DataLoader
 
 # custom modules
-from utils import Logger, set_seed, tab_printer
-from model import MaskGAE, DegreeDecoder, EdgeDecoder, GNNEncoder
-from mask import MaskEdge, MaskPath
+from maskgae.utils import Logger, set_seed, tab_printer
+from maskgae.model import MaskGAE, DegreeDecoder, EdgeDecoder, GNNEncoder
+from maskgae.mask import MaskEdge, MaskPath
 
 
 def train_linkpred(model, splits, args, device="cpu"):
@@ -234,7 +234,8 @@ transform = T.Compose([
 ])
 
 
-root = osp.join('~/public_data/pyg_data')
+# root = '~/public_data/pyg_data' # my root directory
+root = 'data/'
 
 if args.dataset in {'arxiv', 'products', 'mag'}:
     from ogb.nodeproppred import PygNodePropPredDataset
@@ -280,7 +281,7 @@ else:
 train_data, val_data, test_data = T.RandomLinkSplit(num_val=0.1, num_test=0.05,
                                                     is_undirected=True,
                                                     split_labels=True,
-                                                    add_negative_train_samples=True)(data)
+                                                    add_negative_train_samples=False)(data)
 
 splits = dict(train=train_data, valid=val_data, test=test_data)
 
@@ -292,7 +293,7 @@ if args.mask == 'Path':
 elif args.mask == 'Edge':
     mask = MaskEdge(p=args.p)
 else:
-    mask = None
+    mask = None # vanilla GAE
 
 encoder = GNNEncoder(data.num_features, args.encoder_channels, args.hidden_channels,
                      num_layers=args.encoder_layers, dropout=args.encoder_dropout,

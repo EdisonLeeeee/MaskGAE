@@ -58,34 +58,19 @@ def train_linkpred(model, splits, args, device="cpu"):
 
             if epoch % args.eval_period == 0:
                 results = test(splits)
-
-                valid_result = results[monitor][0]
-                # if valid_result > best_valid:
-                #     best_valid = valid_result
-                #     best_epoch = epoch
-                #     torch.save(model.state_dict(), save_path)
-                #     cnt_wait = 0
-                # else:
-                #     cnt_wait += 1
-                if args.debug:
-                    for key, result in results.items():
-                        valid_result, test_result = result
-                        print(key)
-                        print(f'Run: {run + 1:02d} / {args.runs:02d}, '
-                              f'Epoch: {epoch:02d} / {args.epochs:02d}, '
-                              f'Best_epoch: {best_epoch:02d}, '
-                              f'Best_valid: {best_valid:.2%}%, '
-                              f'Loss: {loss:.4f}, '
-                              f'Valid: {valid_result:.2%}, '
-                              f'Test: {test_result:.2%}',
-                              f'Training Time/epoch: {t2-t1:.3f}')
-                    print('#' * round(140*epoch/(args.epochs+1)))
-                # if cnt_wait == args.patience:
-                #     print('Early stopping!')
-                #     break
+                for key, result in results.items():
+                    valid_result, test_result = result
+                    print(key)
+                    print(f'Run: {run + 1:02d} / {args.runs:02d}, '
+                          f'Epoch: {epoch:02d} / {args.epochs:02d}, '
+                          f'Loss: {loss:.4f}, '
+                          f'Valid: {valid_result:.2%}, '
+                          f'Test: {test_result:.2%}',
+                          f'Training Time/epoch: {t2-t1:.3f}')
+                print('#' * round(140*epoch/(args.epochs+1)))
+                
         print('##### Testing on {}/{}'.format(run + 1, args.runs))
 
-        # model.load_state_dict(torch.load(save_path))
         results = test(splits, model)
 
         for key, result in results.items():

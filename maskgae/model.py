@@ -440,18 +440,18 @@ class MaskGAE(nn.Module):
         return roc_auc_score(y, pred), average_precision_score(y, pred)
 
     @torch.no_grad()
-    def test_ogb(self, z_train, z_full, splits, evaluator, batch_size=2**16):
+    def test_ogb(self, z, splits, evaluator, batch_size=2**16):
 
         pos_valid_edge = splits["valid"].pos_edge_label_index
         neg_valid_edge = splits["valid"].neg_edge_label_index
         pos_test_edge = splits["test"].pos_edge_label_index
         neg_test_edge = splits["test"].neg_edge_label_index
 
-        pos_valid_pred = self.batch_predict(z_train, pos_valid_edge)
-        neg_valid_pred = self.batch_predict(z_train, neg_valid_edge)
+        pos_valid_pred = self.batch_predict(z, pos_valid_edge)
+        neg_valid_pred = self.batch_predict(z, neg_valid_edge)
 
-        pos_test_pred = self.batch_predict(z_full, pos_test_edge)
-        neg_test_pred = self.batch_predict(z_full, neg_test_edge)
+        pos_test_pred = self.batch_predict(z, pos_test_edge)
+        neg_test_pred = self.batch_predict(z, neg_test_edge)
 
         results = {}
         for K in [20, 50, 100]:

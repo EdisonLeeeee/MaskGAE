@@ -145,7 +145,7 @@ class GNNEncoder(nn.Module):
         return x
 
     @torch.no_grad()
-    def get_embedding(self, x, edge_index, mode="cat", l2_normalize=False):
+    def get_embedding(self, x, edge_index, mode="cat"):
 
         self.eval()
         assert mode in {"cat", "last"}, mode
@@ -169,9 +169,6 @@ class GNNEncoder(nn.Module):
             embedding = torch.cat(out, dim=1)
         else:
             embedding = out[-1]
-
-        if l2_normalize:
-            embedding = F.normalize(embedding, p=2, dim=1)  # Cora, Citeseer, Pubmed
 
         return embedding
 

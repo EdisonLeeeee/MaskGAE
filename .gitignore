@@ -1,6 +1,5 @@
 # Custom
 *.idea
-*.pdf
 tmp/
 *.txt
 !requirements.txt

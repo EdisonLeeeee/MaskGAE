@@ -1,7 +1,6 @@
 # MaskGAE
 
 
-
 > [**What’s Behind the Mask: Understanding Masked Graph Modeling for Graph Autoencoders**](https://arxiv.org/abs/2205.10053) (KDD 2023)\
 > [**MaskGAE: Masked Graph Modeling Meets Graph Autoencoders**](https://arxiv.org/abs/2205.10053v1) (arXiv 2022)
 >
@@ -21,9 +20,10 @@ The last years have witnessed the emergence of a promising self-supervised learn
 <p align="center"><em>Fig. 2. Comparison of masked language modeling (MLM), masked image modeling (MIM) and masked graph modeling (MGM).</em>
 </p>
 
-+ (Update Oct 27, 2023): Check out our poster [here](./poster.pdf)!
 
 # Quick Look
+
++ (Update Oct 27, 2023): Check out our poster [here](./poster.pdf)!
 
 <p align="center">
   <img src="figs/poster.png"/>
@@ -64,8 +64,13 @@ pip install -r requirements.txt
 All datasets used throughout experiments are publicly available in [PyTorch Geometric library](https://github.com/pyg-team/pytorch_geometric).
 
 # Reproduction
+## Clone this project
+```bash
+git clone https://github.com/EdisonLeeeee/MaskGAE.git
+cd MaskGAE
+```
 
-## Link prediction
+## Link prediction experiments
 + Cora
 ```bash
 python train_linkpred.py --dataset Cora --bn
@@ -87,7 +92,7 @@ python train_linkpred_ogb.py
 python train_linkpred_ogb.py --mask Edge
 ```
 
-## Node classification
+## Node classification experiments
 
 + Cora
 ```bash
@@ -134,9 +139,6 @@ python train_nodeclas.py --dataset mag --alpha 0.003 --bn --decoder_channels 128
                          --encoder_channels 256 --encoder_dropout 0.7 --epochs 100 \
                          --hidden_channels 128 --nodeclas_weight_decay 1e-5 --weight_decay 5e-5 --eval_period 10 --mask Edge   
 ```
-
-You can also simply run `node_classification.ipynb` to reproduce the results.
-
 
 
 # Citation

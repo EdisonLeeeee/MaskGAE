@@ -1,4 +1,7 @@
 # MaskGAE
+
+
+
 > [**What’s Behind the Mask: Understanding Masked Graph Modeling for Graph Autoencoders**](https://arxiv.org/abs/2205.10053) (KDD 2023)\
 > [**MaskGAE: Masked Graph Modeling Meets Graph Autoencoders**](https://arxiv.org/abs/2205.10053v1) (arXiv 2022)
 >
@@ -18,6 +21,13 @@ The last years have witnessed the emergence of a promising self-supervised learn
 <p align="center"><em>Fig. 2. Comparison of masked language modeling (MLM), masked image modeling (MIM) and masked graph modeling (MGM).</em>
 </p>
 
++ (Update Oct 27, 2023): Check out our poster [here](./poster.pdf)!
+
+# Quick Look
+
+<p align="center">
+  <img src="figs/poster.png"/>
+</p>
 
 # Requirements
 Higher versions should be also available.
@@ -81,17 +91,17 @@ python train_linkpred_ogb.py --mask Edge
 
 + Cora
 ```bash
-python train_nodeclas.py --dataset Cora --bn --l2_normalize --alpha 0.004
+python train_nodeclas.py --dataset Cora --bn --l2_normalize --alpha 0.004 --full_data
 python train_nodeclas.py --dataset Cora --bn --l2_normalize --alpha 0.003 --mask Edge --eval_period 10
 ```
 + Citeseer
 ```bash
-python train_nodeclas.py --dataset Citeseer --bn --l2_normalize --nodeclas_weight_decay 0.1 --alpha 0.001 --lr 0.02
-python train_nodeclas.py --dataset Citeseer --bn --l2_normalize --nodeclas_weight_decay 0.1 --alpha 0.001  --lr 0.02 --mask Edge  --eval_period 20
+python train_nodeclas.py --dataset Citeseer --bn --l2_normalize --nodeclas_weight_decay 0.1 --alpha 0.001 --lr 0.02 --full_data
+python train_nodeclas.py --dataset Citeseer --bn --l2_normalize --nodeclas_weight_decay 0.1 --alpha 0.001  --lr 0.02 --mask Edge
 ```
 + Pubmed
 ```bash
-python train_nodeclas.py --dataset Pubmed --bn --l2_normalize --alpha 0.001  --encoder_dropout 0.5 --decoder_dropout 0.5
+python train_nodeclas.py --dataset Pubmed --bn --l2_normalize --alpha 0.001  --encoder_dropout 0.5 --decoder_dropout 0.5 --full_data
 python train_nodeclas.py --dataset Pubmed --bn --l2_normalize --alpha 0.001  --encoder_dropout 0.5 --mask Edge
 ```
 + Photo
@@ -109,7 +119,7 @@ python train_nodeclas.py --dataset Computers --bn --encoder_dropout 0.5 --alpha 
 python train_nodeclas.py --dataset arxiv --bn --decoder_channels 128 --decoder_dropout 0. --decoder_layers 4 \
                           --encoder_channels 256 --encoder_dropout 0.2 --encoder_layers 4 \
                           --hidden_channels 512 --lr 0.0005 --nodeclas_weight_decay 0 --weight_decay 0.0001 --epochs 100  \
-                          --eval_period 10         
+                          --eval_period 10
 python train_nodeclas.py --dataset arxiv --bn --decoder_channels 128 --decoder_dropout 0. --decoder_layers 4 \
                           --encoder_channels 256 --encoder_dropout 0.2 --encoder_layers 4 \
                           --hidden_channels 512 --lr 0.0005 --nodeclas_weight_decay 0 --weight_decay 0.0001 --epochs 100  \
@@ -127,7 +137,9 @@ python train_nodeclas.py --dataset mag --alpha 0.003 --bn --decoder_channels 128
 
 You can also simply run `node_classification.ipynb` to reproduce the results.
 
-# Cite
+
+
+# Citation
 
 ```bibtex
 @inproceedings{maskgae,
@@ -140,8 +152,10 @@ You can also simply run `node_classification.ipynb` to reproduce the results.
                   Changhua Meng and
                   Zibin Zheng and
                   Weiqiang Wang},
-  title        = {What's Behind the Mask: Understanding Masked Graph Modeling for Graph Autoencoders},
-  booktitle    = {KDD},
+  title        = {What's Behind the Mask: Understanding Masked Graph Modeling for Graph
+                  Autoencoders},
+  booktitle    = {{KDD}},
+  pages        = {1268--1279},
   publisher    = {{ACM}},
   year         = {2023}
 }

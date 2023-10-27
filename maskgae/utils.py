@@ -4,9 +4,12 @@ import torch
 import random
 import numpy as np
 from texttable import Texttable
+import torch_geometric.transforms as T
+from torch_geometric.datasets import Amazon, Coauthor, Planetoid, Reddit
+from torch_geometric.data import Data
+from torch_geometric.utils import index_to_mask
 
-
-def set_seed(seed):
+def set_seed(seed: int):
     random.seed(seed)
     os.environ['PYTHONHASHSEED'] = str(seed)
     np.random.seed(seed)
@@ -17,7 +20,49 @@ def set_seed(seed):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.enabled = False
 
+def get_dataset(root: str, name: str, transform=None) -> Data:
+    if name in {'arxiv', 'products', 'mag'}:
+        from ogb.nodeproppred import PygNodePropPredDataset
+        print('loading ogb dataset...')
+        dataset = PygNodePropPredDataset(root=root, name=f'ogbn-{name}')
+        if name in ['mag']:
+            rel_data = dataset[0]
+            # We are only interested in paper <-> paper relations.
+            data = Data(
+                    x=rel_data.x_dict['paper'],
+                    edge_index=rel_data.edge_index_dict[('paper', 'cites', 'paper')],
+                    y=rel_data.y_dict['paper'])
+            data = transform(data)
+            split_idx = dataset.get_idx_split()
+            data.train_mask = index_to_mask(split_idx['train']['paper'], data.num_nodes)
+            data.val_mask = index_to_mask(split_idx['valid']['paper'], data.num_nodes)
+            data.test_mask = index_to_mask(split_idx['test']['paper'], data.num_nodes)
+        else:
+            data = transform(dataset[0])
+            split_idx = dataset.get_idx_split()
+            data.train_mask = index_to_mask(split_idx['train'], data.num_nodes)
+            data.val_mask = index_to_mask(split_idx['valid'], data.num_nodes)
+            data.test_mask = index_to_mask(split_idx['test'], data.num_nodes)
 
+    elif name in {'Cora', 'Citeseer', 'Pubmed'}:
+        dataset = Planetoid(root, name)
+        data = transform(dataset[0])
+
+    elif name == 'Reddit':
+        dataset = Reddit(osp.join(root, name))
+        data = transform(dataset[0])
+    elif name in {'Photo', 'Computers'}:
+        dataset = Amazon(root, name)
+        data = transform(dataset[0])
+        data = T.RandomNodeSplit(num_val=0.1, num_test=0.8)(data)
+    elif name in {'CS', 'Physics'}:
+        dataset = Coauthor(root, name)
+        data = transform(dataset[0])
+        data = T.RandomNodeSplit(num_val=0.1, num_test=0.8)(data)
+    else:
+        raise ValueError(name)
+    return data
+    
 def tab_printer(args):
     """Function to print the logs in a nice tabular format.
 
@@ -35,49 +80,3 @@ def tab_printer(args):
     t = Texttable()
     t.add_rows([["Parameter", "Value"]] + [[k, str(args[k])] for k in keys if not k.startswith('__')])
     return t.draw()
-
-
-class Logger(object):
-    def __init__(self, runs, info=None):
-        self.info = info
-        self.results = [[] for _ in range(runs)]
-
-    def add_result(self, run, result):
-        assert len(result) == 2
-        assert run >= 0 and run < len(self.results)
-        self.results[run].append(result)
-
-    def print_statistics(self, run=None, f=sys.stdout, last_best=False):
-        if run is not None:
-            result = 100 * torch.tensor(self.results[run])
-            if last_best:
-                # get last max value index by reversing result tensor
-                argmax = result.size(0) - result[:, 0].flip(dims=[0]).argmax().item() - 1
-            else:
-                argmax = result[:, 0].argmax().item()
-            print(f'Run {run + 1:02d}:', file=f)
-            print(f'Highest Valid: {result[:, 0].max():.2f}', file=f)
-            print(f'Highest Eval Point: {argmax + 1}', file=f)
-            print(f'   Final Test: {result[argmax, 1]:.2f}', file=f)
-        else:
-            result = 100 * torch.tensor(self.results)
-
-            best_results = []
-
-            for r in result:
-                valid = r[:, 0].max().item()
-                if last_best:
-                    # get last max value index by reversing result tensor
-                    argmax = r.size(0) - r[:, 0].flip(dims=[0]).argmax().item() - 1
-                else:
-                    argmax = r[:, 0].argmax().item()
-                test = r[argmax, 1].item()
-                best_results.append((valid, test))
-
-            best_result = torch.tensor(best_results)
-
-            print(f'All runs:', file=f)
-            r = best_result[:, 0]
-            print(f'Highest Valid: {r.mean():.2f} ± {r.std():.2f}', file=f)
-            r = best_result[:, 1]
-            print(f'   Final Test: {r.mean():.2f} ± {r.std():.2f}', file=f)

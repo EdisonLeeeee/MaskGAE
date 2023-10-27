@@ -175,39 +175,6 @@ class GNNEncoder(nn.Module):
 
         return embedding
 
-    @torch.no_grad()
-    def get_graph_embedding(self, x, edge_index, batch, l2_normalize=False, pooling='sum'):
-        """https://github.com/fanyun-sun/InfoGraph/blob/master/unsupervised/gin.py"""
-
-        self.eval()
-        assert batch is not None
-
-        edge_index = to_sparse_tensor(edge_index, x.shape[0])
-        xs = []  # node emb, expected to be (layers_num, batch_node_num, dim)
-        for i, conv in enumerate(self.convs[:-1]):
-            x = self.dropout(x)
-            x = conv(x, edge_index)
-            x = self.bns[i](x)
-            x = self.activation(x)
-            xs.append(x)
-        x = self.dropout(x)
-        x = self.convs[-1](x, edge_index)
-        x = self.bns[-1](x)
-        x = self.activation(x)
-        xs.append(x)
-
-        pooling = {'sum': global_add_pool, 'mean': global_mean_pool, 'max': global_max_pool}[pooling]
-        # (layers_num, batch_graph_num, dim)
-        x_pool = [pooling(x, batch) for x in xs]
-
-        # (batch_graph_num, layers_num × dim)
-        embedding = torch.cat(x_pool, dim=1)
-        
-        if l2_normalize:
-            embedding = F.normalize(embedding, p=2, dim=1)  
-
-        return embedding  # graph embeddings for current batch
-
 
 class DotEdgeDecoder(nn.Module):
     """Simple Dot Product Edge Decoder"""
@@ -271,7 +238,7 @@ class EdgeDecoder(nn.Module):
 
 
 class DegreeDecoder(nn.Module):
-    """Simple MLP Edge Decoder"""
+    """Simple MLP Degree Decoder"""
 
     def __init__(
         self, in_channels, hidden_channels, out_channels=1,
@@ -356,10 +323,10 @@ class MaskGAE(nn.Module):
     def forward(self, x, edge_index):
         return self.encoder(x, edge_index)
 
-    def train_epoch(
-        self, data, optimizer, alpha=0.002,
+    def train_step(self, data, optimizer, alpha=0.002,
         batch_size=2 ** 16, grad_norm=1.0
     ):
+        self.train()
 
         x, edge_index = data.x, data.edge_index
 
@@ -390,18 +357,19 @@ class MaskGAE(nn.Module):
             batch_masked_edges = masked_edges[:, perm]
             batch_neg_edges = neg_edges[:, perm]
 
-            # ******************* loss for edge prediction *********************
+            # ******************* loss for edge reconstruction *********************
             pos_out = self.edge_decoder(
                 z, batch_masked_edges, sigmoid=False
             )
             neg_out = self.edge_decoder(z, batch_neg_edges, sigmoid=False)
             loss = self.loss_fn(pos_out, neg_out)
+            # **********************************************************************
 
-            # ******************************************************************
-
+            # ******************* loss for degree prediction ***********************
             if self.degree_decoder is not None and alpha:
                 deg = degree(masked_edges[1].flatten(), data.num_nodes).float()
                 loss += alpha * F.mse_loss(self.degree_decoder(z).squeeze(), deg)
+            # **********************************************************************
 
             loss.backward()
 
@@ -425,8 +393,9 @@ class MaskGAE(nn.Module):
         return pred
 
     @torch.no_grad()
-    def test(self, z, pos_edge_index, neg_edge_index, batch_size=2**16):
-
+    def test_step(self, data, pos_edge_index, neg_edge_index, batch_size=2**16):
+        self.eval()
+        z = self(data.x, data.edge_index)
         pos_pred = self.batch_predict(z, pos_edge_index)
         neg_pred = self.batch_predict(z, neg_edge_index)
 
@@ -440,29 +409,19 @@ class MaskGAE(nn.Module):
         return roc_auc_score(y, pred), average_precision_score(y, pred)
 
     @torch.no_grad()
-    def test_ogb(self, z, splits, evaluator, batch_size=2**16):
-
-        pos_valid_edge = splits["valid"].pos_edge_label_index
-        neg_valid_edge = splits["valid"].neg_edge_label_index
-        pos_test_edge = splits["test"].pos_edge_label_index
-        neg_test_edge = splits["test"].neg_edge_label_index
-
-        pos_valid_pred = self.batch_predict(z, pos_valid_edge)
-        neg_valid_pred = self.batch_predict(z, neg_valid_edge)
-
-        pos_test_pred = self.batch_predict(z, pos_test_edge)
-        neg_test_pred = self.batch_predict(z, neg_test_edge)
+    def test_step_ogb(self, data, evaluator, 
+                      pos_edge_index, neg_edge_index, batch_size=2**16):
+        self.eval()
+        z = self(data.x, data.edge_index)
+        pos_pred = self.batch_predict(z, pos_edge_index)
+        neg_pred = self.batch_predict(z, neg_edge_index)
 
         results = {}
         for K in [20, 50, 100]:
             evaluator.K = K
-            valid_hits = evaluator.eval(
-                {"y_pred_pos": pos_valid_pred, "y_pred_neg": neg_valid_pred, }
+            hits = evaluator.eval(
+                {"y_pred_pos": pos_pred, "y_pred_neg": neg_pred, }
             )[f"hits@{K}"]
-            test_hits = evaluator.eval(
-                {"y_pred_pos": pos_test_pred, "y_pred_neg": neg_test_pred, }
-            )[f"hits@{K}"]
-
-            results[f"Hits@{K}"] = (valid_hits, test_hits)
+            results[f"Hits@{K}"] = hits
 
         return results

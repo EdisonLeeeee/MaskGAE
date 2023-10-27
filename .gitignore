@@ -105,7 +105,7 @@ dataset/
 *.h5
 *.pkl
 *.pth
-
+*.pt
 # Experimental
 experimental/
 

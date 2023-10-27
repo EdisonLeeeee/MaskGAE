@@ -1,110 +1,50 @@
-import os.path as osp
-import time
 import argparse
+import numpy as np
 
 import torch
 import torch_geometric.transforms as T
-from torch_geometric.datasets import Amazon, Coauthor, Planetoid, Reddit
+from tqdm.auto import tqdm
 
 # custom modules
-from maskgae.utils import Logger, set_seed, tab_printer
+from maskgae.utils import set_seed, tab_printer, get_dataset
 from maskgae.model import MaskGAE, DegreeDecoder, EdgeDecoder, GNNEncoder, DotEdgeDecoder
 from maskgae.mask import MaskEdge, MaskPath
 
 
 def train_linkpred(model, splits, args, device="cpu"):
+    optimizer = torch.optim.Adam(model.parameters(),
+                                 lr=args.lr,
+                                 weight_decay=args.weight_decay)
 
-    def train(data):
-        model.train()
-        loss = model.train_epoch(data.to(device), optimizer,
-                                 alpha=args.alpha, batch_size=args.batch_size)
-        return loss
+    best_valid = 0
+    batch_size = args.batch_size
+    
+    train_data = splits['train'].to(device)
+    valid_data = splits['valid'].to(device)
+    test_data = splits['test'].to(device)
+    
+    for epoch in tqdm(range(1, 1 + args.epochs)):
 
-    @torch.no_grad()
-    def test(splits, batch_size=2**16):
-        model.eval()
-        train_data = splits['train'].to(device)
-        z = model(train_data.x, train_data.edge_index)
+        loss = model.train_step(train_data, optimizer,
+                                alpha=args.alpha, 
+                                batch_size=args.batch_size)
+        
+        if epoch % args.eval_period == 0:
+            valid_auc, valid_ap = model.test_step(valid_data, 
+                                                  valid_data.pos_edge_label_index, 
+                                                  valid_data.neg_edge_label_index, 
+                                                  batch_size=batch_size)
+            if valid_auc > best_valid:
+                best_valid = valid_auc
+                best_epoch = epoch
+                torch.save(model.state_dict(), args.save_path)
 
-        valid_auc, valid_ap = model.test(
-            z, splits['valid'].pos_edge_label_index, splits['valid'].neg_edge_label_index, batch_size=batch_size)
-
-        test_auc, test_ap = model.test(
-            z, splits['test'].pos_edge_label_index, splits['test'].neg_edge_label_index, batch_size=batch_size)
-
-        results = {'AUC': (valid_auc, test_auc), 'AP': (valid_ap, test_ap)}
-        return results
-
-    monitor = 'AUC'
-    save_path = args.save_path
-    loggers = {
-        'AUC': Logger(args.runs, args),
-        'AP': Logger(args.runs, args),
-    }
-    print('Start Training...')
-    for run in range(args.runs):
-        model.reset_parameters()
-
-        optimizer = torch.optim.Adam(model.parameters(),
-                                     lr=args.lr,
-                                     weight_decay=args.weight_decay)
-
-        best_valid = 0.0
-        best_epoch = 0
-        cnt_wait = 0
-        for epoch in range(1, 1 + args.epochs):
-
-            t1 = time.time()
-            loss = train(splits['train'])
-            t2 = time.time()
-
-            if epoch % args.eval_period == 0:
-                results = test(splits)
-
-                valid_result = results[monitor][0]
-                if valid_result > best_valid:
-                    best_valid = valid_result
-                    best_epoch = epoch
-                    torch.save(model.state_dict(), save_path)
-                    cnt_wait = 0
-                else:
-                    cnt_wait += 1
-                if args.debug:
-                    for key, result in results.items():
-                        valid_result, test_result = result
-                        print(key)
-                        print(f'Run: {run + 1:02d} / {args.runs:02d}, '
-                              f'Epoch: {epoch:02d} / {args.epochs:02d}, '
-                              f'Best_epoch: {best_epoch:02d}, '
-                              f'Best_valid: {best_valid:.2%}%, '
-                              f'Loss: {loss:.4f}, '
-                              f'Valid: {valid_result:.2%}, '
-                              f'Test: {test_result:.2%}',
-                              f'Training Time/epoch: {t2-t1:.3f}')
-                    print('#' * round(140*epoch/(args.epochs+1)))
-                if cnt_wait == args.patience:
-                    print('Early stopping!')
-                    break
-        print('##### Testing on {}/{}'.format(run + 1, args.runs))
-
-        model.load_state_dict(torch.load(save_path))
-        results = test(splits, model)
-
-        for key, result in results.items():
-            valid_result, test_result = result
-            print(key)
-            print(f'**** Testing on Run: {run + 1:02d}, '
-                  f'Best Epoch: {best_epoch:02d}, '
-                  f'Valid: {valid_result:.2%}, '
-                  f'Test: {test_result:.2%}')
-
-        for key, result in results.items():
-            loggers[key].add_result(run, result)
-
-    print('##### Final Testing result')
-    for key in loggers.keys():
-        print(key)
-        loggers[key].print_statistics()
+    model.load_state_dict(torch.load(args.save_path))
+    test_auc, test_ap = model.test_step(test_data, 
+                                        test_data.pos_edge_label_index, 
+                                        test_data.neg_edge_label_index, 
+                                        batch_size=batch_size)   
+    return test_auc, test_ap
 
 
 parser = argparse.ArgumentParser()
@@ -135,9 +75,7 @@ parser.add_argument('--p', type=float, default=0.7, help='Mask ratio or sample r
 parser.add_argument('--epochs', type=int, default=500, help='Number of training epochs. (default: 300)')
 parser.add_argument('--runs', type=int, default=10, help='Number of runs. (default: 10)')
 parser.add_argument('--eval_period', type=int, default=10, help='(default: 10)')
-parser.add_argument('--patience', type=int, default=30, help='(default: 30)')
-parser.add_argument("--save_path", nargs="?", default="model_linkpred", help="save path for model. (default: model_linkpred)")
-parser.add_argument('--debug', action='store_true', help='Whether to log information in each epoch. (default: False)')
+parser.add_argument("--save_path", nargs="?", default="MaskGAE-LinkPred.pt", help="save path for model. (default: MaskGAE-LinkPred.pt)")
 parser.add_argument("--device", type=int, default=0)
 
 
@@ -148,9 +86,6 @@ except:
     parser.print_help()
     exit(0)
 
-if not args.save_path.endswith('.pth'):
-    args.save_path += '.pth'
-    
 set_seed(args.seed)
 if args.device < 0:
     device = "cpu"
@@ -163,28 +98,17 @@ transform = T.Compose([
 ])
 
 
+# (!IMPORTANT) Specify the path to your dataset directory ##############
 # root = '~/public_data/pyg_data' # my root directory
 root = 'data/'
+########################################################################
 
-if args.dataset in {'arxiv'}:
-    from ogb.nodeproppred import PygNodePropPredDataset
-    dataset = PygNodePropPredDataset(root=root, name=f'ogbn-{args.dataset}')
-elif args.dataset in {'Cora', 'Citeseer', 'Pubmed'}:
-    dataset = Planetoid(root, args.dataset)
-elif args.dataset == 'Reddit':
-    dataset = Reddit(osp.join(root, args.dataset))
-elif args.dataset in {'Photo', 'Computers'}:
-    dataset = Amazon(root, args.dataset)
-elif args.dataset in {'CS', 'Physics'}:
-    dataset = Coauthor(root, args.dataset)
-else:
-    raise ValueError(args.dataset)
-    
-data = transform(dataset[0])
+data = get_dataset(root, args.dataset, transform=transform)
+
 train_data, val_data, test_data = T.RandomLinkSplit(num_val=0.05, num_test=0.1,
                                                     is_undirected=True,
                                                     split_labels=True,
-                                                    add_negative_train_samples=True)(data)
+                                                    add_negative_train_samples=False)(data)
 
 splits = dict(train=train_data, valid=val_data, test=test_data)
 
@@ -213,6 +137,16 @@ degree_decoder = DegreeDecoder(args.hidden_channels, args.decoder_channels,
 
 model = MaskGAE(encoder, edge_decoder, degree_decoder, mask).to(device)
 
-print(model)
+auc_results = []
+ap_results = []
 
-train_linkpred(model, splits, args, device=device)
+for run in range(1, args.runs+1):
+    test_auc, test_ap = train_linkpred(model, splits, args, device=device)
+    auc_results.append(test_auc)
+    ap_results.append(test_ap)
+    print(f'Runs {run} - AUC: {test_auc:.2%}', f'AP: {test_ap:.2%}')    
+
+print(f'Link Prediction Results ({args.runs} runs):\n'
+      f'AUC: {np.mean(auc_results):.2%} ± {np.std(auc_results):.2%}',
+      f'AP: {np.mean(ap_results):.2%} ± {np.std(ap_results):.2%}',
+     )

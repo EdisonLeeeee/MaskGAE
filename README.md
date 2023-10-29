@@ -21,13 +21,9 @@ The last years have witnessed the emergence of a promising self-supervised learn
 </p>
 
 
-# Quick Look
+# News
 
-+ (Update Oct 27, 2023): Check out our poster [here](./poster.pdf)!
-
-<p align="center">
-  <img src="figs/poster.png"/>
-</p>
++ Oct 27, 2023: 🔥🔥🔥 Check out our poster [here](./poster.pdf)!
 
 # Requirements
 Higher versions should be also available.

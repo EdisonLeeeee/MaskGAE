@@ -23,6 +23,7 @@ The last years have witnessed the emergence of a promising self-supervised learn
 
 # News
 
++ Oct 15, 2024: 🔥🔥🔥 We released a new Graph Autoencoders Benchmark --- [lrGAE](https://github.com/EdisonLeeeee/lrGAE).
 + Nov 30, 2023: 🔥🔥🔥 MaskGAE based solution has just won the 2nd place in [ICDM Cup 2023](https://tugraph.antgroup.com/blog?id=15): community detection based on graph pretrained models. Code is open-sourced [here](https://github.com/Echochef/ICDM), congrats!
 + Oct 27, 2023: 🔥🔥🔥 Check out our poster [here](./poster.pdf)!
 
